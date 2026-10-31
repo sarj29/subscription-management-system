@@ -65,13 +65,14 @@ and payments.
    ```bash
    docker compose up --build
    ```
-   This command will:
-   - Start the **PostgreSQL** container (`brightloop-postgres`) on port `5432` with persistent storage in the `postgres_data` volume.
-   - Wait for PostgreSQL to become healthy via automated health checks.
-   - Start the **FastAPI Backend** container (`brightloop-backend`), automatically apply database migrations (`alembic upgrade head`), and serve the API on port `8000`.
+   This single command starts the entire 3-tier application:
+   - **PostgreSQL** (`brightloop-postgres`): Running on port `5432` with persistent data in the `postgres_data` volume.
+   - **FastAPI Backend** (`brightloop-backend`): Waits for PostgreSQL to be healthy, automatically applies database migrations (`alembic upgrade head`), and serves the API on port `8000`.
+   - **React Frontend** (`brightloop-frontend`): Waits for backend readiness, compiles the Vite application, and serves the UI on port `3000` with an integrated proxy to the backend API.
 
 4. **Access the application:**
-   - **Health check:** [http://localhost:8000/health](http://localhost:8000/health)
+   - **Frontend Web UI:** [http://localhost:3000](http://localhost:3000)
+   - **Backend Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
    - **Interactive API Docs (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
    - **Alternative Docs (ReDoc):** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
@@ -83,6 +84,7 @@ and payments.
   ```
 - **View live service logs:**
   ```bash
+  docker compose logs -f frontend
   docker compose logs -f backend
   docker compose logs -f db
   ```

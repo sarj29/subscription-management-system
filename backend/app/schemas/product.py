@@ -3,15 +3,19 @@ Pydantic schemas for Product and ProductVariant endpoints.
 """
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class VariantPriceAdjustment(BaseModel):
+    adjustment: Decimal = Field(..., description="Amount to add to (or subtract from) variant unit_price")
 
 
 class ProductVariantBase(BaseModel):
-    name: str
+    name: str = Field(..., max_length=255)
     description: str | None = None
-    sku: str | None = None
-    unit_price: Decimal = Decimal("0.0000")
-    currency: str = "USD"
+    sku: str | None = Field(None, max_length=100)
+    unit_price: Decimal = Field(default=Decimal("0.0000"), ge=0)
+    currency: str = Field(default="USD", max_length=3)
     is_active: bool = True
 
 
@@ -23,7 +27,7 @@ class ProductVariantUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     sku: str | None = None
-    unit_price: Decimal | None = None
+    unit_price: Decimal | None = Field(default=None, ge=0)
     currency: str | None = None
     is_active: bool | None = None
 
@@ -36,9 +40,9 @@ class ProductVariantOut(ProductVariantBase):
 
 
 class ProductBase(BaseModel):
-    name: str
+    name: str = Field(..., max_length=255)
     description: str | None = None
-    sku: str | None = None
+    sku: str | None = Field(None, max_length=100)
     is_active: bool = True
 
 

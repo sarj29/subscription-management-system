@@ -17,7 +17,7 @@ class CustomerBase(BaseModel):
 
 
 class CustomerCreate(CustomerBase):
-    pass
+    user_id: str | None = None
 
 
 class CustomerUpdate(BaseModel):
@@ -30,6 +30,7 @@ class CustomerUpdate(BaseModel):
     country: str | None = None
     tax_id: str | None = None
     notes: str | None = None
+    user_id: str | None = None
 
 
 class CustomerOut(CustomerBase):

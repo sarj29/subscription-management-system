@@ -4,17 +4,17 @@ Pydantic schemas for Subscription and SubscriptionLine endpoints.
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.subscription import SubscriptionStatus
 
 
 class SubscriptionLineBase(BaseModel):
-    description: str
-    quantity: Decimal = Decimal("1.0000")
-    unit_price: Decimal = Decimal("0.0000")
-    discount_percent: Decimal = Decimal("0.00")
-    tax_percent: Decimal = Decimal("0.00")
+    description: str = Field(..., max_length=500)
+    quantity: Decimal = Field(default=Decimal("1.0000"), gt=0)
+    unit_price: Decimal = Field(default=Decimal("0.0000"), ge=0)
+    discount_percent: Decimal = Field(default=Decimal("0.00"), ge=0, le=100)
+    tax_percent: Decimal = Field(default=Decimal("0.00"), ge=0)
     position: int = 0
     product_variant_id: str | None = None
 
@@ -39,7 +39,7 @@ class SubscriptionBase(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     notes: str | None = None
-    currency: str = "USD"
+    currency: str = Field(default="USD", max_length=3)
 
 
 class SubscriptionCreate(SubscriptionBase):
@@ -52,10 +52,21 @@ class SubscriptionUpdate(BaseModel):
     end_date: date | None = None
     notes: str | None = None
     plan_id: str | None = None
+    lines: list[SubscriptionLineCreate] | None = None
 
 
 class SubscriptionStatusUpdate(BaseModel):
     status: SubscriptionStatus
+
+
+class SubscriptionRenewal(BaseModel):
+    start_date: date | None = None
+    notes: str | None = None
+
+
+class SubscriptionClose(BaseModel):
+    reason: str | None = None
+    close_date: date | None = None
 
 
 class SubscriptionOut(SubscriptionBase):

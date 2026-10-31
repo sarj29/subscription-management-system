@@ -60,9 +60,11 @@ from app.schemas.product import (  # noqa: F401
     ProductVariantCreate,
     ProductVariantOut,
     ProductVariantUpdate,
+    VariantPriceAdjustment,
 )
 from app.schemas.quotation import (  # noqa: F401
     QuotationBase,
+    QuotationConvertToSubscription,
     QuotationCreate,
     QuotationLineBase,
     QuotationLineCreate,
@@ -73,11 +75,13 @@ from app.schemas.quotation import (  # noqa: F401
 )
 from app.schemas.subscription import (  # noqa: F401
     SubscriptionBase,
+    SubscriptionClose,
     SubscriptionCreate,
     SubscriptionLineBase,
     SubscriptionLineCreate,
     SubscriptionLineOut,
     SubscriptionOut,
+    SubscriptionRenewal,
     SubscriptionStatusUpdate,
     SubscriptionUpdate,
 )

@@ -1,50 +1,66 @@
 """
-Customers router — CRUD endpoints.
+Customers router — CRUD endpoints with validation, search, filtering, and RBAC.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
-from app.models.customer import Customer
+from app.models.user import User
 from app.schemas.customer import CustomerCreate, CustomerOut, CustomerUpdate
+from app.services import customer_service
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
 
 @router.get("/", response_model=list[CustomerOut])
 def list_customers(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: str | None = Query(None, description="Search company name, contact, or email"),
+    city: str | None = Query(None, description="Filter by city"),
+    country: str | None = Query(None, description="Filter by country"),
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    return db.query(Customer).offset(skip).limit(limit).all()
+    """List customers with search, city/country filtering, and pagination."""
+    return customer_service.list_customers(
+        db=db,
+        current_user=current_user,
+        skip=skip,
+        limit=limit,
+        search=search,
+        city=city,
+        country=country,
+    )
 
 
 @router.post("/", response_model=CustomerOut, status_code=status.HTTP_201_CREATED)
 def create_customer(
     payload: CustomerCreate,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    customer = Customer(**payload.model_dump())
-    db.add(customer)
-    db.commit()
-    db.refresh(customer)
-    return customer
+    """Create a new customer profile with uniqueness and data validation."""
+    return customer_service.create_customer(
+        db=db,
+        current_user=current_user,
+        payload=payload,
+    )
 
 
 @router.get("/{customer_id}", response_model=CustomerOut)
 def get_customer(
     customer_id: str,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    customer = db.get(Customer, customer_id)
-    if not customer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found.")
-    return customer
+    """Get customer details by ID (enforces customer isolation)."""
+    return customer_service.get_customer(
+        db=db,
+        current_user=current_user,
+        customer_id=customer_id,
+    )
 
 
 @router.patch("/{customer_id}", response_model=CustomerOut)
@@ -52,26 +68,26 @@ def update_customer(
     customer_id: str,
     payload: CustomerUpdate,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    customer = db.get(Customer, customer_id)
-    if not customer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found.")
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(customer, field, value)
-    db.commit()
-    db.refresh(customer)
-    return customer
+    """Partial update of a customer profile."""
+    return customer_service.update_customer(
+        db=db,
+        current_user=current_user,
+        customer_id=customer_id,
+        payload=payload,
+    )
 
 
 @router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_customer(
     customer_id: str,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    customer = db.get(Customer, customer_id)
-    if not customer:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found.")
-    db.delete(customer)
-    db.commit()
+    """Delete a customer profile (Admin only)."""
+    customer_service.delete_customer(
+        db=db,
+        current_user=current_user,
+        customer_id=customer_id,
+    )

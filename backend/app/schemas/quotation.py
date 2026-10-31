@@ -4,17 +4,17 @@ Pydantic schemas for Quotation and QuotationLine endpoints.
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.quotation import QuotationStatus
 
 
 class QuotationLineBase(BaseModel):
-    description: str
-    quantity: Decimal = Decimal("1.0000")
-    unit_price: Decimal = Decimal("0.0000")
-    discount_percent: Decimal = Decimal("0.00")
-    tax_percent: Decimal = Decimal("0.00")
+    description: str = Field(..., max_length=500)
+    quantity: Decimal = Field(default=Decimal("1.0000"), gt=0)
+    unit_price: Decimal = Field(default=Decimal("0.0000"), ge=0)
+    discount_percent: Decimal = Field(default=Decimal("0.00"), ge=0, le=100)
+    tax_percent: Decimal = Field(default=Decimal("0.00"), ge=0)
     position: int = 0
     product_variant_id: str | None = None
 
@@ -37,7 +37,7 @@ class QuotationBase(BaseModel):
     reference: str | None = None
     valid_until: date | None = None
     notes: str | None = None
-    currency: str = "USD"
+    currency: str = Field(default="USD", max_length=3)
 
 
 class QuotationCreate(QuotationBase):
@@ -49,10 +49,17 @@ class QuotationUpdate(BaseModel):
     reference: str | None = None
     valid_until: date | None = None
     notes: str | None = None
+    lines: list[QuotationLineCreate] | None = None
 
 
 class QuotationStatusUpdate(BaseModel):
     status: QuotationStatus
+
+
+class QuotationConvertToSubscription(BaseModel):
+    plan_id: str = Field(..., description="Target Plan ID for subscription")
+    start_date: date | None = None
+    notes: str | None = None
 
 
 class QuotationOut(QuotationBase):

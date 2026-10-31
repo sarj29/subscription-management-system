@@ -1,13 +1,12 @@
 """
-Products and ProductVariants router.
+Products and ProductVariants router — CRUD and price adjustments.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
-from app.models.product import Product
-from app.models.product_variant import ProductVariant
+from app.models.user import User
 from app.schemas.product import (
     ProductCreate,
     ProductOut,
@@ -15,7 +14,9 @@ from app.schemas.product import (
     ProductVariantCreate,
     ProductVariantOut,
     ProductVariantUpdate,
+    VariantPriceAdjustment,
 )
+from app.services import product_service
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -26,42 +27,46 @@ router = APIRouter(prefix="/products", tags=["Products"])
 
 @router.get("/", response_model=list[ProductOut])
 def list_products(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: str | None = Query(None, description="Search by name, SKU, or description"),
+    is_active: bool | None = Query(None, description="Filter by active status"),
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    return db.query(Product).offset(skip).limit(limit).all()
+    """List products with search and active status filter."""
+    return product_service.list_products(
+        db=db,
+        current_user=current_user,
+        skip=skip,
+        limit=limit,
+        search=search,
+        is_active=is_active,
+    )
 
 
 @router.post("/", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
 def create_product(
     payload: ProductCreate,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    product_data = payload.model_dump(exclude={"variants"})
-    product = Product(**product_data)
-    db.add(product)
-    db.flush()  # populate product.id before creating variants
-    for variant_data in payload.variants:
-        variant = ProductVariant(product_id=product.id, **variant_data.model_dump())
-        db.add(variant)
-    db.commit()
-    db.refresh(product)
-    return product
+    """Create a new product with optional initial variants (Admin/Staff only)."""
+    return product_service.create_product(
+        db=db,
+        current_user=current_user,
+        payload=payload,
+    )
 
 
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(
     product_id: str,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    _: User = Depends(get_current_active_user),
 ):
-    product = db.get(Product, product_id)
-    if not product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
-    return product
+    """Get product details by ID."""
+    return product_service.get_product(db=db, product_id=product_id)
 
 
 @router.patch("/{product_id}", response_model=ProductOut)
@@ -69,50 +74,53 @@ def update_product(
     product_id: str,
     payload: ProductUpdate,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    product = db.get(Product, product_id)
-    if not product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(product, field, value)
-    db.commit()
-    db.refresh(product)
-    return product
+    """Update product metadata (Admin/Staff only)."""
+    return product_service.update_product(
+        db=db,
+        current_user=current_user,
+        product_id=product_id,
+        payload=payload,
+    )
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(
     product_id: str,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    product = db.get(Product, product_id)
-    if not product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
-    db.delete(product)
-    db.commit()
+    """Delete a product (Admin only)."""
+    product_service.delete_product(
+        db=db,
+        current_user=current_user,
+        product_id=product_id,
+    )
 
 
 # --------------------------------------------------------------------------
 # Variants (nested under a product)
 # --------------------------------------------------------------------------
 
-@router.post("/{product_id}/variants", response_model=ProductVariantOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{product_id}/variants",
+    response_model=ProductVariantOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_variant(
     product_id: str,
     payload: ProductVariantCreate,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    product = db.get(Product, product_id)
-    if not product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
-    variant = ProductVariant(product_id=product_id, **payload.model_dump())
-    db.add(variant)
-    db.commit()
-    db.refresh(variant)
-    return variant
+    """Add a new variant to an existing product."""
+    return product_service.create_variant(
+        db=db,
+        current_user=current_user,
+        product_id=product_id,
+        payload=payload,
+    )
 
 
 @router.patch("/{product_id}/variants/{variant_id}", response_model=ProductVariantOut)
@@ -121,16 +129,34 @@ def update_variant(
     variant_id: str,
     payload: ProductVariantUpdate,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    variant = db.get(ProductVariant, variant_id)
-    if not variant or variant.product_id != product_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variant not found.")
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(variant, field, value)
-    db.commit()
-    db.refresh(variant)
-    return variant
+    """Update variant details and pricing."""
+    return product_service.update_variant(
+        db=db,
+        current_user=current_user,
+        product_id=product_id,
+        variant_id=variant_id,
+        payload=payload,
+    )
+
+
+@router.post("/{product_id}/variants/{variant_id}/adjust-price", response_model=ProductVariantOut)
+def adjust_variant_price(
+    product_id: str,
+    variant_id: str,
+    payload: VariantPriceAdjustment,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Apply an incremental price adjustment to a variant (e.g. +560.00 for Odoo brand)."""
+    return product_service.adjust_variant_price(
+        db=db,
+        current_user=current_user,
+        product_id=product_id,
+        variant_id=variant_id,
+        adjustment=payload.adjustment,
+    )
 
 
 @router.delete("/{product_id}/variants/{variant_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -138,10 +164,12 @@ def delete_variant(
     product_id: str,
     variant_id: str,
     db: Session = Depends(get_db),
-    _: object = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
 ):
-    variant = db.get(ProductVariant, variant_id)
-    if not variant or variant.product_id != product_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variant not found.")
-    db.delete(variant)
-    db.commit()
+    """Delete a product variant (Admin only)."""
+    product_service.delete_variant(
+        db=db,
+        current_user=current_user,
+        product_id=product_id,
+        variant_id=variant_id,
+    )

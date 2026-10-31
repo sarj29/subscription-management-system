@@ -27,14 +27,13 @@ class SubscriptionStatus(str, enum.Enum):
     CLOSED = "closed"            # terminated
 
 
-# Valid forward transitions
 _SUBSCRIPTION_TRANSITIONS: dict[SubscriptionStatus, set[SubscriptionStatus]] = {
-    SubscriptionStatus.DRAFT:      {SubscriptionStatus.QUOTATION, SubscriptionStatus.CLOSED},
+    SubscriptionStatus.DRAFT:      {SubscriptionStatus.QUOTATION, SubscriptionStatus.CONFIRMED, SubscriptionStatus.CLOSED},
     SubscriptionStatus.QUOTATION:  {SubscriptionStatus.CONFIRMED, SubscriptionStatus.CLOSED},
     SubscriptionStatus.CONFIRMED:  {SubscriptionStatus.ACTIVE, SubscriptionStatus.CLOSED},
     SubscriptionStatus.ACTIVE:     {SubscriptionStatus.PAUSED, SubscriptionStatus.CLOSED},
     SubscriptionStatus.PAUSED:     {SubscriptionStatus.ACTIVE, SubscriptionStatus.CLOSED},
-    SubscriptionStatus.CLOSED:     set(),
+    SubscriptionStatus.CLOSED:     {SubscriptionStatus.ACTIVE},  # renewal
 }
 
 

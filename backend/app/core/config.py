@@ -3,16 +3,17 @@ Application configuration loaded from environment variables via pydantic-setting
 Never hardcode secrets here — all sensitive values must come from the .env file.
 """
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
+ROOT_DIR = Path(__file__).resolve().parents[3]
 class Settings(BaseSettings):
     """Central settings object.  All fields are read from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ROOT_DIR / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

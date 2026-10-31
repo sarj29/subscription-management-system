@@ -1,4 +1,7 @@
 """
-InvoiceLine model — stub for Phase 2.
+InvoiceLine model — kept as a standalone file for import clarity.
+The actual class is defined in invoice.py; this file re-exports it.
 """
-# TODO: Implement in Phase 2 (billing module)
+from app.models.invoice import InvoiceLine  # noqa: F401
+
+__all__ = ["InvoiceLine"]

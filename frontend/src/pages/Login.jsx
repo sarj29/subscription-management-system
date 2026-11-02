@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Lock, Mail, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
+import { Layers2, Lock, Mail, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -39,30 +39,38 @@ export default function Login() {
         justifyContent: 'center',
         backgroundColor: 'var(--bg-main)',
         padding: '1.5rem',
-        backgroundImage: 'radial-gradient(circle at 50% 15%, var(--primary-light) 0%, transparent 60%)',
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: 440,
+          maxWidth: 420,
           background: 'var(--bg-card)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-lg)',
-          padding: '2.5rem 2.2rem',
+          boxShadow: 'var(--shadow-md)',
+          padding: '2.5rem 2rem',
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div
-            className="brand-badge"
-            style={{ width: 48, height: 48, margin: '0 auto 1rem', fontSize: '1.5rem' }}
+            style={{
+              width: 44,
+              height: 44,
+              margin: '0 auto 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--primary)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <Zap size={28} />
+            <Layers2 size={24} />
           </div>
-          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>Welcome to Brightloop</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Unified Subscriptions, Invoicing & Billing
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>Brightloop</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            Subscription & Recurring Billing Management
           </p>
         </div>
 
@@ -81,7 +89,7 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
             <div style={{ position: 'relative' }}>
@@ -104,7 +112,14 @@ export default function Login() {
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label className="form-label">Password</label>
-              <a href="#reset" onClick={(e) => { e.preventDefault(); alert('Password reset link sent to registered email.'); }} style={{ fontSize: '0.8rem' }}>
+              <a
+                href="#reset"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert('Password reset link sent to registered email.');
+                }}
+                style={{ fontSize: '0.8rem' }}
+              >
                 Forgot?
               </a>
             </div>
@@ -128,17 +143,17 @@ export default function Login() {
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem' }}
+            style={{ width: '100%', padding: '0.7rem', marginTop: '0.5rem' }}
             disabled={loading}
           >
-            {loading ? 'Authenticating...' : 'Sign In to Portal'} <ArrowRight size={16} />
+            {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight size={16} />
           </button>
         </form>
 
-        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
           <p
             style={{
-              fontSize: '0.75rem',
+              fontSize: '0.725rem',
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -147,7 +162,7 @@ export default function Login() {
               textAlign: 'center',
             }}
           >
-            ⚡ Fast Demo Access (1-Click)
+            Quick Role Switcher
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
             <button

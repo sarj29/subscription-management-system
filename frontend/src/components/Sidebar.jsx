@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  Zap,
+  Layers2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,12 +22,12 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   const navItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard, public: true },
-    { label: 'Subscriptions', path: '/subscriptions', icon: Repeat, public: true },
-    { label: 'Invoices', path: '/invoices', icon: Receipt, public: true },
-    { label: 'Quotations', path: '/quotations', icon: FileText, staffOnly: true },
     { label: 'Customers', path: '/customers', icon: Users, staffOnly: true },
     { label: 'Products', path: '/products', icon: Package, staffOnly: true },
     { label: 'Plans', path: '/plans', icon: Layers, staffOnly: true },
+    { label: 'Quotations', path: '/quotations', icon: FileText, staffOnly: true },
+    { label: 'Subscriptions', path: '/subscriptions', icon: Repeat, public: true },
+    { label: 'Invoices', path: '/invoices', icon: Receipt, public: true },
     { label: 'Payments', path: '/payments', icon: CreditCard, staffOnly: true },
     { label: 'Settings', path: '/settings', icon: Settings, public: true },
   ];
@@ -41,8 +41,20 @@ export default function Sidebar({ collapsed, onToggle }) {
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="brand-logo">
-          <div className="brand-badge">
-            <Zap size={20} />
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--primary)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Layers2 size={18} />
           </div>
           {!collapsed && <span>Brightloop</span>}
         </div>
@@ -66,7 +78,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               title={collapsed ? item.label : undefined}
             >
-              <Icon size={20} />
+              <Icon size={19} />
               {!collapsed && <span>{item.label}</span>}
             </NavLink>
           );

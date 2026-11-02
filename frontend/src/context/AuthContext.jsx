@@ -3,97 +3,74 @@ import api from '../services/api';
 
 const AuthContext = createContext(null);
 
-export const DEFAULT_USERS = {
-  admin: {
-    id: 'user-admin-01',
-    email: 'admin@brightloop.com',
-    full_name: 'Alexander Wright',
-    role: 'admin',
-    status: 'active',
-  },
-  staff: {
-    id: 'user-staff-01',
-    email: 'staff@brightloop.com',
-    full_name: 'Chloe Bennett',
-    role: 'staff',
-    status: 'active',
-  },
-  customer: {
-    id: 'user-cust-01',
-    email: 'customer@acmecloud.com',
-    full_name: 'Sarah Jenkins (Acme Cloud)',
-    role: 'customer',
-    status: 'active',
-    customer_id: 'cust-001',
-  },
-};
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user_info');
-    return saved ? JSON.parse(saved) : DEFAULT_USERS.admin;
+    try {
+      const savedUser = localStorage.getItem('user_info');
+      const savedToken = localStorage.getItem('access_token');
+
+      // Never restore a user without a real access token.
+      return savedUser && savedToken ? JSON.parse(savedUser) : null;
+    } catch {
+      localStorage.removeItem('user_info');
+      localStorage.removeItem('access_token');
+      return null;
+    }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('access_token') || 'mock-demo-jwt-token');
+
+  const [token, setToken] = useState(
+    () => localStorage.getItem('access_token') || null
+  );
 
   useEffect(() => {
-    if (user) {
+    if (user && token) {
       localStorage.setItem('user_info', JSON.stringify(user));
     } else {
       localStorage.removeItem('user_info');
     }
-  }, [user]);
+  }, [user, token]);
 
   const login = async (email, password) => {
-    try {
-      const formData = new URLSearchParams();
-      formData.append('username', email);
-      formData.append('password', password);
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
 
+    try {
       const res = await api.post('/auth/token', formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
 
       const accessToken = res.data.access_token;
-      setToken(accessToken);
-      localStorage.setItem('access_token', accessToken);
 
-      // Fetch profile
-      try {
-        const meRes = await api.get('/auth/me');
-        setUser(meRes.data);
-        return meRes.data;
-      } catch {
-        const mockMatch = Object.values(DEFAULT_USERS).find((u) => u.email === email) || {
-          id: 'user-custom',
-          email,
-          full_name: email.split('@')[0],
-          role: 'staff',
-          status: 'active',
-        };
-        setUser(mockMatch);
-        return mockMatch;
+      if (!accessToken) {
+        throw new Error('Login response did not contain an access token.');
       }
-    } catch {
-      // Fallback demo login
-      const mockMatch = Object.values(DEFAULT_USERS).find((u) => u.email === email) || {
-        id: 'user-custom',
-        email,
-        full_name: email.split('@')[0],
-        role: 'staff',
-        status: 'active',
-      };
-      setToken('mock-demo-jwt-token');
-      localStorage.setItem('access_token', 'mock-demo-jwt-token');
-      setUser(mockMatch);
-      return mockMatch;
-    }
-  };
 
-  const loginAs = (roleKey) => {
-    const targetUser = DEFAULT_USERS[roleKey] || DEFAULT_USERS.admin;
-    setUser(targetUser);
-    setToken('mock-demo-jwt-token');
-    localStorage.setItem('access_token', 'mock-demo-jwt-token');
+      // Store the real token before requesting the authenticated profile.
+      localStorage.setItem('access_token', accessToken);
+      setToken(accessToken);
+
+      const meRes = await api.get('/auth/me');
+
+      if (!meRes.data) {
+        throw new Error('Could not retrieve authenticated user profile.');
+      }
+
+      setUser(meRes.data);
+      localStorage.setItem('user_info', JSON.stringify(meRes.data));
+
+      return meRes.data;
+    } catch (error) {
+      // Never keep a partially authenticated session.
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_info');
+      setToken(null);
+      setUser(null);
+
+      throw error;
+    }
   };
 
   const logout = () => {
@@ -108,12 +85,11 @@ export function AuthProvider({ children }) {
       value={{
         user,
         token,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !!token,
         isAdmin: user?.role === 'admin',
         isStaff: user?.role === 'staff' || user?.role === 'admin',
         isCustomer: user?.role === 'customer',
         login,
-        loginAs,
         logout,
       }}
     >
@@ -124,8 +100,10 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+
   return context;
 }

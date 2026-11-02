@@ -1,33 +1,63 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layers2, Lock, Mail, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
+import { Layers2, Lock, Mail, ArrowRight, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@brightloop.com');
-  const [password, setPassword] = useState('Password123!');
+  const [isRegister, setIsRegister] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, loginAs } = useAuth();
+  const [successMsg, setSuccessMsg] = useState('');
+  const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleToggleMode = () => {
+    setIsRegister(!isRegister);
+    setError('');
+    setSuccessMsg('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setLoading(true);
+
     try {
-      await login(email, password);
-      navigate('/');
+      if (isRegister) {
+        // Register calling POST /api/v1/auth/register
+        await api.post('/auth/register', {
+          email,
+          password,
+          full_name: fullName,
+        });
+
+        // Automatically log in with newly created credentials
+        await login(email, password);
+        navigate('/');
+      } else {
+        // Sign in
+        await login(email, password);
+        navigate('/');
+      }
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Invalid email or password');
+      const detail = err?.response?.data?.detail;
+      if (typeof detail === 'string') {
+        setError(detail);
+      } else if (Array.isArray(detail)) {
+        setError(detail.map((d) => d.msg || JSON.stringify(d)).join(', '));
+      } else if (err?.message) {
+        setError(err.message);
+      } else {
+        setError(isRegister ? 'Registration failed' : 'Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = (role) => {
-    loginAs(role);
-    navigate('/');
   };
 
   return (
@@ -52,7 +82,7 @@ export default function Login() {
           padding: '2.5rem 2rem',
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <div
             style={{
               width: 44,
@@ -74,6 +104,60 @@ export default function Login() {
           </p>
         </div>
 
+        {/* Tab switch between Sign In and Create Account */}
+        <div
+          style={{
+            display: 'flex',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--bg-subtle)',
+            padding: '4px',
+            marginBottom: '1.5rem',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setIsRegister(false);
+              setError('');
+              setSuccessMsg('');
+            }}
+            style={{
+              flex: 1,
+              padding: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: !isRegister ? 600 : 500,
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: !isRegister ? 'var(--bg-card)' : 'transparent',
+              color: !isRegister ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow: !isRegister ? 'var(--shadow-sm)' : 'none',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsRegister(true);
+              setError('');
+              setSuccessMsg('');
+            }}
+            style={{
+              flex: 1,
+              padding: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: isRegister ? 600 : 500,
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: isRegister ? 'var(--bg-card)' : 'transparent',
+              color: isRegister ? 'var(--text-primary)' : 'var(--text-muted)',
+              boxShadow: isRegister ? 'var(--shadow-sm)' : 'none',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Create Account
+          </button>
+        </div>
+
         {error && (
           <div
             style={{
@@ -83,13 +167,52 @@ export default function Login() {
               color: 'var(--danger-text)',
               fontSize: '0.875rem',
               marginBottom: '1.25rem',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
             }}
           >
             {error}
           </div>
         )}
 
+        {successMsg && (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--success-bg)',
+              color: 'var(--success-text)',
+              fontSize: '0.875rem',
+              marginBottom: '1.25rem',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+            }}
+          >
+            {successMsg}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {isRegister && (
+            <div className="form-group">
+              <label className="form-label">Full Name</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.3rem' }}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                />
+                <User
+                  size={16}
+                  color="var(--text-muted)"
+                  style={{ position: 'absolute', left: 12, top: 12 }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="form-group">
             <label className="form-label">Email Address</label>
             <div style={{ position: 'relative' }}>
@@ -99,6 +222,7 @@ export default function Login() {
                 style={{ paddingLeft: '2.3rem' }}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
                 required
               />
               <Mail
@@ -110,19 +234,7 @@ export default function Login() {
           </div>
 
           <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label className="form-label">Password</label>
-              <a
-                href="#reset"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('Password reset link sent to registered email.');
-                }}
-                style={{ fontSize: '0.8rem' }}
-              >
-                Forgot?
-              </a>
-            </div>
+            <label className="form-label">Password</label>
             <div style={{ position: 'relative' }}>
               <input
                 type="password"
@@ -130,6 +242,7 @@ export default function Login() {
                 style={{ paddingLeft: '2.3rem' }}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
                 required
               />
               <Lock
@@ -146,50 +259,41 @@ export default function Login() {
             style={{ width: '100%', padding: '0.7rem', marginTop: '0.5rem' }}
             disabled={loading}
           >
-            {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight size={16} />
+            {loading
+              ? isRegister
+                ? 'Creating account...'
+                : 'Authenticating...'
+              : isRegister
+              ? 'Create Account'
+              : 'Sign In'}
+            <ArrowRight size={16} />
           </button>
         </form>
 
-        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
-          <p
-            style={{
-              fontSize: '0.725rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: 'var(--text-muted)',
-              marginBottom: '0.75rem',
-              textAlign: 'center',
-            }}
-          >
-            Quick Role Switcher
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => handleQuickDemo('admin')}
-              style={{ fontSize: '0.75rem', padding: '0.45rem' }}
-            >
-              <ShieldCheck size={14} color="var(--primary)" /> Admin
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => handleQuickDemo('staff')}
-              style={{ fontSize: '0.75rem', padding: '0.45rem' }}
-            >
-              <UserCheck size={14} color="var(--purple)" /> Staff
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => handleQuickDemo('customer')}
-              style={{ fontSize: '0.75rem', padding: '0.45rem' }}
-            >
-              <UserCheck size={14} color="var(--success)" /> Customer
-            </button>
-          </div>
+        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          {isRegister ? (
+            <span>
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={handleToggleMode}
+                style={{ color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Sign In
+              </button>
+            </span>
+          ) : (
+            <span>
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={handleToggleMode}
+                style={{ color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Create Account
+              </button>
+            </span>
+          )}
         </div>
       </div>
     </div>

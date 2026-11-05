@@ -1,9 +1,6 @@
 # Brightloop Subscription Management System
 
-A unified subscription management platform
-for managing products, plans, customers,
-subscriptions, recurring billing, invoices
-and payments.
+A centralized subscription management platform designed to simplify and streamline subscription-based business operations. It enables businesses to manage products, plans, customers, subscriptions, recurring billing, invoices, and payments through a unified platform, while providing better visibility into revenue and subscription activities.
 
 ## Tech Stack
 
@@ -82,12 +79,7 @@ and payments.
   ```bash
   docker compose up --build -d
   ```
-- **View live service logs:**
-  ```bash
-  docker compose logs -f frontend
-  docker compose logs -f backend
-  docker compose logs -f db
-  ```
+
 - **Check service health and status:**
   ```bash
   docker compose ps
@@ -100,10 +92,3 @@ and payments.
   ```bash
   docker compose down
   ```
-
-## Contributors
-
-- Sreya
-- Merin
-- Neha
-- Tahseen
